@@ -19,6 +19,8 @@ use crate::memory::{
 const ENTRIES_LEN: usize = 170;
 
 /// Memory allocator that allocates full pages.
+///
+/// Returns kernel-only memory with flags `PRESENT | WRITABLE`.
 pub struct FullPageAllocator {
     inner: Mutex<Option<NonNull<FPAInner>>>,
 }
@@ -44,13 +46,14 @@ unsafe impl Send for FullPageAllocator {}
 unsafe impl Sync for FullPageAllocator {}
 
 impl FullPageAllocator {
-    /// Create a new dangling full page allocator.
+    /// Create a new full page allocator.
     pub const fn new() -> Self {
         Self {
             inner: Mutex::new(None),
         }
     }
 
+    /// Retrieve the inner FPAInner struct or initialize it if it doesn't exist.
     fn init_or_get(&self) -> Result<FPAGuard, AllocError> {
         let mut inner = self.inner.lock();
         if inner.is_none() {

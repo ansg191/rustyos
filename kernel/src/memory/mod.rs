@@ -37,6 +37,7 @@ fn active_level_4_table() -> &'static mut PageTable {
     unsafe { &mut *page_table_ptr }
 }
 
+/// Initialize the page table.
 pub fn init() {
     let level_4_table = active_level_4_table();
     // SAFETY: We know that the physical address space is mapped to the virtual address space
@@ -44,6 +45,7 @@ pub fn init() {
     *PAGE_TABLE.lock() = Some(unsafe { OffsetPageTable::new(level_4_table, PHYSICAL_MEM_START) })
 }
 
+/// Initialize the [`BitmapFrameAllocator`] with the given memory regions.
 pub fn init_frame_allocator(memory_regions: &'static MemoryRegions) {
     init();
     let mut ptable = PAGE_TABLE.lock();

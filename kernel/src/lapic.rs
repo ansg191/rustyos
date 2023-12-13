@@ -3,8 +3,10 @@ use core::arch::asm;
 use raw_cpuid::CpuId;
 use x86_64::{registers::model_specific::Msr, VirtAddr};
 
-use crate::memory::PAGE_TABLE;
-use crate::pit::{OperatingMode, PIT0};
+use crate::{
+    memory::PAGE_TABLE,
+    pit::{OperatingMode, PIT0},
+};
 
 pub static LAPIC: spin::Mutex<Option<Lapic>> = spin::Mutex::new(None);
 
@@ -17,6 +19,10 @@ pub struct Lapic {
 }
 
 impl Lapic {
+    /// Initialize the local APIC
+    ///
+    /// Checks if the CPU supports the local APIC, and if so, enables it.
+    /// Also verifies that the local APIC is working correctly.
     pub fn new() -> Result<Self, Error> {
         let cpu_id = CpuId::new();
         let has_apic = cpu_id.get_feature_info().map_or(false, |f| f.has_apic());
@@ -91,6 +97,7 @@ impl Lapic {
         unsafe { ptr.write_volatile(val) };
     }
 
+    /// Starts the APIC timer to fire an interrupt every 10ms
     pub fn start_timer(&mut self) {
         // Spurious interrupt vector register
         self.write(RegisterOffset::SpuriousInterruptVector, 0x1ff);
@@ -102,7 +109,8 @@ impl Lapic {
         self.write(RegisterOffset::DivideConfiguration, 0x3);
 
         // Prepare the PIT to sleep for 10ms (10000µs)
-        PIT0.start_timer(OperatingMode::InterruptOnTerminalCount, 100).unwrap();
+        PIT0.start_timer(OperatingMode::InterruptOnTerminalCount, 100)
+            .unwrap();
 
         // Set APIC init counter to -1
         self.write(RegisterOffset::InitialCount, 0xffff_ffff);
@@ -121,6 +129,7 @@ impl Lapic {
         self.write(RegisterOffset::InitialCount, ticks_per_10ms);
     }
 
+    /// Acknowledge an interrupt
     pub fn end_of_interrupt(&mut self) {
         self.write(RegisterOffset::EndOfInterrupt, 0);
     }

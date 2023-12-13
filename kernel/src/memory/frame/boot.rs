@@ -6,16 +6,26 @@ use x86_64::{
 
 use crate::memory::frame::usable_regions;
 
+/// Boot-time physical frame allocator.
+///
+/// Used to bootstrap the kernel's default frame allocator [`BitmapFrameAllocator`].
+///
+/// It's a very simple allocator that has a counter and returns the next frame from the memory sections.
+/// The allocator cannot deallocate frames. It is not meant to be used after [`BitmapFrameAllocator`] is initialized.
+///
+/// [`BitmapFrameAllocator`]: crate::memory::frame::BitmapFrameAllocator
 pub struct BootFrameAllocator {
     regions: &'static MemoryRegions,
     next: usize,
 }
 
 impl BootFrameAllocator {
+    /// Creates a new frame allocator with the given memory regions & no allocated frames.
     pub fn new(regions: &'static MemoryRegions) -> Self {
         Self { regions, next: 0 }
     }
 
+    /// Returns the number of frames that have been allocated.
     pub fn used(&self) -> usize {
         self.next
     }

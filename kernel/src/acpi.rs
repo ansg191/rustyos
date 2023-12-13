@@ -7,12 +7,14 @@ use crate::memory::PAGE_TABLE;
 
 pub static RDSP_ADDRESS: Once<usize> = Once::new();
 
+/// Get the ACPI tables from the BIOS.
 pub fn get_acpi() -> AcpiResult<AcpiTables<ACPIHandler>> {
-    let rsdp = RDSP_ADDRESS.try_call_once(|| unsafe {
-        let mapping = acpi::rsdp::Rsdp::search_for_on_bios(ACPIHandler)?;
+    let rsdp = RDSP_ADDRESS.try_call_once(|| {
+        let mapping = unsafe { acpi::rsdp::Rsdp::search_for_on_bios(ACPIHandler)? };
         Ok(mapping.physical_start())
     })?;
 
+    // SAFETY: We know that the address is valid because we just got it from the BIOS.
     unsafe { AcpiTables::from_rsdp(ACPIHandler, *rsdp) }
 }
 

@@ -1,4 +1,5 @@
 use core::num::TryFromIntError;
+
 use spin::Mutex;
 use x86_64::instructions::port::{Port, PortWriteOnly};
 
@@ -23,7 +24,12 @@ impl ProgrammableIntervalTimer {
         }))
     }
 
-    fn set_cmd(cmd: &mut PortWriteOnly<u8>, channel: Channel, access_mode: AccessMode, operating_mode: OperatingMode) {
+    fn set_cmd(
+        cmd: &mut PortWriteOnly<u8>,
+        channel: Channel,
+        access_mode: AccessMode,
+        operating_mode: OperatingMode,
+    ) {
         let mut val = channel as u8;
         val |= (access_mode as u8) << 4;
         val |= (operating_mode as u8) << 1;
