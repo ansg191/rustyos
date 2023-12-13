@@ -12,6 +12,7 @@
 extern crate alloc;
 
 mod acpi;
+mod ioapic;
 mod lapic;
 mod memory;
 mod mp;
@@ -44,6 +45,13 @@ pub fn kmain(info: &'static mut bootloader_api::BootInfo) -> ! {
     let mut lpic = lapic::Lapic::new().unwrap();
     lpic.start_timer();
     *lapic::LAPIC.lock() = Some(lpic);
+
+    let mut ioapic = ioapic::IoApic::new().unwrap();
+    ioapic.disable_all();
+    *ioapic::IOAPIC.lock() = Some(ioapic);
+
+    serial::COM1.lock().enable_interrupts();
+
     x86_64::instructions::interrupts::enable();
 
     kprintln!("Hello, world!");
@@ -71,12 +79,6 @@ pub fn kmain(info: &'static mut bootloader_api::BootInfo) -> ! {
         memory::layout::ALLOCATOR_START.as_u64(),
         memory::layout::ALLOCATOR_END.as_u64()
     );
-    {
-        let acpi = acpi::get_acpi().unwrap();
-        let platform = acpi.platform_info().unwrap();
-        kprintln!("Platform: {:#?}", platform);
-    }
-
     // {
     //     let mut arr = alloc::vec::Vec::<Box<_>>::with_capacity(512);
     //     for i in 0..arr.capacity() {

@@ -6,6 +6,15 @@ use x86_64::{
 
 use crate::kprintln;
 
+pub const IRQ0: u8 = 0x20;
+pub const IRQ_COM1: u8 = 4;
+
+fn ack_lapic() {
+    if let Some(ref mut lapic) = *crate::lapic::LAPIC.lock() {
+        lapic.end_of_interrupt();
+    }
+}
+
 fn general_handler(_: InterruptStackFrame, idx: u8, errcode: Option<u64>) {
     kprintln!("Interrupt!:");
     kprintln!("\tidx: {:x}", idx);
@@ -13,10 +22,13 @@ fn general_handler(_: InterruptStackFrame, idx: u8, errcode: Option<u64>) {
     panic!("Interrupt!");
 }
 
-extern "x86-interrupt" fn irq_handler(_: InterruptStackFrame) {
-    if let Some(ref mut lapic) = *crate::lapic::LAPIC.lock() {
-        lapic.end_of_interrupt();
-    }
+extern "x86-interrupt" fn timer_handler(_: InterruptStackFrame) {
+    ack_lapic();
+}
+
+extern "x86-interrupt" fn com1_handler(_: InterruptStackFrame) {
+    crate::serial::COM1.lock().handle_interrupt();
+    ack_lapic();
 }
 
 extern "x86-interrupt" fn page_fault_handler(_: InterruptStackFrame, errcode: PageFaultErrorCode) {
@@ -33,7 +45,8 @@ lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
         set_general_handler!(&mut idt, general_handler);
-        idt[32].set_handler_fn(irq_handler);
+        idt[IRQ0.into()].set_handler_fn(timer_handler);
+        idt[(IRQ0 + IRQ_COM1).into()].set_handler_fn(com1_handler);
         idt.page_fault.set_handler_fn(page_fault_handler);
         idt
     };

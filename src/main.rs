@@ -11,7 +11,7 @@ fn set_debug(cmd: &mut Command) {
     target remote localhost:1234
     symbol-file -o 0x8000000000 {kernel_sym_path}
     set substitute-path /rustc/3340d49d22b1aba425779767278c40781826c2f5 /Volumes/Source/.rustup/toolchains/nightly-aarch64-apple-darwin/lib/rustlib/src/rust
-    b kmain
+    b kernel::kmain
     "#
     );
 

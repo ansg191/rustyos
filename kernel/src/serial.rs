@@ -1,7 +1,7 @@
 use core::fmt::Write;
 
 use spin::{Lazy, Mutex};
-use x86_64::instructions::port::{Port, PortRead, PortWrite};
+use x86_64::instructions::port::{PortRead, PortWrite};
 
 pub static COM1: Lazy<Mutex<Serial>> = Lazy::new(|| {
     let Ok(serial) = Serial::com1() else {
@@ -38,7 +38,7 @@ macro_rules! kprintln {
 }
 
 pub struct Serial {
-    port: Port<u8>,
+    port: u16,
 }
 
 impl Serial {
@@ -50,9 +50,7 @@ impl Serial {
 
     pub unsafe fn new(port: u16) -> Result<Self, SerialError> {
         Self::init_serial(port)?;
-        Ok(Self {
-            port: Port::new(port),
-        })
+        Ok(Self { port })
     }
 
     fn init_serial(port: u16) -> Result<(), SerialError> {
@@ -79,14 +77,57 @@ impl Serial {
         }
     }
 
-    pub fn write_byte(&mut self, byte: u8) {
+    pub fn enable_interrupts(&mut self) {
         unsafe {
-            self.port.write(byte);
+            u8::write_to_port(self.port + 1, 0x01);
+
+            // Acknowledge any pending interrupts
+            u8::read_from_port(self.port + 2);
+            u8::read_from_port(self.port);
+        }
+
+        // Enable interrupts on IOAPIC
+        let mut ioapic = crate::ioapic::IOAPIC.lock();
+        if let Some(ioapic) = &mut *ioapic {
+            ioapic.enable(crate::trap::IRQ_COM1, 0);
         }
     }
 
-    pub fn read_byte(&mut self) -> u8 {
-        unsafe { self.port.read() }
+    pub fn write_byte(&mut self, byte: u8) {
+        unsafe {
+            u8::write_to_port(self.port, byte);
+        }
+    }
+
+    pub fn data_available(&mut self) -> bool {
+        unsafe { u8::read_from_port(self.port + 5) & 1 == 1 }
+    }
+
+    pub fn read_byte(&mut self) -> Option<u8> {
+        if self.data_available() {
+            Some(unsafe { u8::read_from_port(self.port) })
+        } else {
+            None
+        }
+    }
+
+    pub fn handle_interrupt(&mut self) {
+        while let Some(byte) = self.read_byte() {
+            match byte {
+                // Backspace
+                0x7f => {
+                    self.write_byte(b'\x08');
+                    self.write_byte(b' ');
+                    self.write_byte(b'\x08');
+                }
+                // New line
+                b'\r' | b'\n' => {
+                    self.write_byte(b'\r');
+                    self.write_byte(b'\n');
+                }
+                b => self.write_byte(b),
+            }
+        }
     }
 }
 

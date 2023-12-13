@@ -544,6 +544,8 @@ name = "kernel"
 version = "0.1.0"
 dependencies = [
  "acpi",
+ "bit_field",
+ "bitflags 2.4.1",
  "bootloader_api",
  "lazy_static",
  "lock_api",
