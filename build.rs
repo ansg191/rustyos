@@ -1,9 +1,9 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-fn extract_debug_symbols(kernel: &PathBuf) -> PathBuf {
+fn extract_debug_symbols(kernel: &Path) -> PathBuf {
     let path = kernel.with_extension("sym");
     let mut cmd = std::process::Command::new("x86_64-elf-objcopy");
-    cmd.arg("--only-keep-debug").arg(&kernel).arg(&path);
+    cmd.arg("--only-keep-debug").arg(kernel).arg(&path);
     cmd.spawn().unwrap().wait().unwrap();
     path
 }

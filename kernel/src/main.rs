@@ -1,13 +1,17 @@
 #![feature(allocator_api, abi_x86_interrupt, asm_const, never_type)]
 #![feature(slice_ptr_get)]
-#![allow(dead_code)]
+#![warn(clippy::pedantic, clippy::nursery)]
+#![allow(
+    dead_code,
+    clippy::module_name_repetitions,
+    clippy::cast_possible_truncation
+)]
 #![no_std]
 #![no_main]
 
 extern crate alloc;
 
 mod acpi;
-mod critical_section;
 mod lapic;
 mod memory;
 mod mp;
@@ -27,7 +31,11 @@ const BOOT_CONFIG: bootloader_api::BootloaderConfig = {
 };
 bootloader_api::entry_point!(kmain, config = &BOOT_CONFIG);
 
-#[no_mangle]
+/// The entry point for the kernel.
+///
+/// # Panics
+///
+/// Panics if the kernel crashes.
 pub fn kmain(info: &'static mut bootloader_api::BootInfo) -> ! {
     trap::init_idt();
     memory::init();
@@ -90,5 +98,7 @@ pub fn kmain(info: &'static mut bootloader_api::BootInfo) -> ! {
     // unsafe {frame_alloc.deallocate_frame(frame.unwrap())};
 
     kprintln!("No Crash!");
-    loop {}
+    loop {
+        x86_64::instructions::interrupts::enable_and_hlt();
+    }
 }

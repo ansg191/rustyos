@@ -59,16 +59,16 @@ impl Serial {
         unsafe {
             u8::write_to_port(port + 1, 0x00); // Disable all interrupts
             u8::write_to_port(port + 3, 0x80); // Enable DLAB (set baud rate divisor)
-            u8::write_to_port(port + 0, 0x03); // Set divisor to 3 (lo byte) 38400 baud
+            u8::write_to_port(port, 0x03); // Set divisor to 3 (lo byte) 38400 baud
             u8::write_to_port(port + 1, 0x00); //                  (hi byte)
             u8::write_to_port(port + 3, 0x03); // 8 bits, no parity, one stop bit
             u8::write_to_port(port + 2, 0xC7); // Enable FIFO, clear them, with 14-byte threshold
             u8::write_to_port(port + 4, 0x0B); // IRQs enabled, RTS/DSR set
             u8::write_to_port(port + 4, 0x1E); // Set in loopback mode, test the serial chip
-            u8::write_to_port(port + 0, 0xAE); // Test serial chip (send byte 0xAE and check if serial returns same byte)
+            u8::write_to_port(port, 0xAE); // Test serial chip (send byte 0xAE and check if serial returns same byte)
 
             // Check if serial is faulty (i.e: not same byte as sent)
-            if u8::read_from_port(port + 0) != 0xAE {
+            if u8::read_from_port(port) != 0xAE {
                 return Err(SerialError);
             }
 

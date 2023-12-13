@@ -53,17 +53,15 @@ impl FullPageAllocator {
         }
     }
 
-    /// Retrieve the inner FPAInner struct or initialize it if it doesn't exist.
+    /// Retrieve the inner [`FPAInner`] struct or initialize it if it doesn't exist.
     fn init_or_get(&self) -> Result<FPAGuard, AllocError> {
         let mut inner = self.inner.lock();
         if inner.is_none() {
             add_entry_page(&mut inner)?;
         }
 
-        Ok(
-            lock_api::MutexGuard::try_map(inner, |x| x.as_mut().map(|p| unsafe { p.as_mut() }))
-                .map_err(|_| AllocError)?,
-        )
+        lock_api::MutexGuard::try_map(inner, |x| x.as_mut().map(|p| unsafe { p.as_mut() }))
+            .map_err(|_| AllocError)
     }
 }
 
@@ -72,10 +70,12 @@ unsafe impl Allocator for FullPageAllocator {
         let size = layout.size();
         let num_pages = size.div_ceil(4096);
 
-        let mut inner = self.init_or_get()?;
-
-        let addr = inner.find_free_pages(num_pages as u64).ok_or(AllocError)?;
-        inner.alloc_pages(addr, num_pages as u64);
+        let addr = {
+            let mut inner = self.init_or_get()?;
+            let addr = inner.find_free_pages(num_pages as u64).ok_or(AllocError)?;
+            inner.alloc_pages(addr, num_pages as u64);
+            addr
+        };
 
         // Allocate pages
         let mut fr_alloc = FRAME_ALLOCATOR.lock();
@@ -131,18 +131,18 @@ unsafe impl Allocator for FullPageAllocator {
 unsafe impl GlobalAlloc for FullPageAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         self.allocate(layout)
-            .map(|x| x.as_mut_ptr())
+            .map(core::ptr::NonNull::as_mut_ptr)
             .unwrap_or(core::ptr::null_mut())
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        self.deallocate(NonNull::new_unchecked(ptr), layout)
+        self.deallocate(NonNull::new_unchecked(ptr), layout);
     }
 }
 
 impl FPAInner {
     fn find_free_pages(&self, req_pages: u64) -> Option<VirtAddr> {
-        for entry in self.entries.iter() {
+        for entry in &self.entries {
             let Entry::Usable { start, pages } = *entry else {
                 return None;
             };
@@ -152,11 +152,8 @@ impl FPAInner {
         }
 
         // No free pages found in this entry page, search next
-        if let Some(next) = self.next {
-            unsafe { next.as_ref().find_free_pages(req_pages) }
-        } else {
-            None
-        }
+        self.next
+            .and_then(|next| unsafe { next.as_ref().find_free_pages(req_pages) })
     }
 
     fn insert_entry(&mut self, idx: usize, entry: Entry) -> Result<(), AllocError> {
@@ -204,11 +201,9 @@ impl FPAInner {
     }
 
     fn remove_entry(&mut self, idx: usize) -> Entry {
-        let end = if let Some(mut next) = self.next {
-            Some(unsafe { next.as_mut().remove_entry(0) })
-        } else {
-            None
-        };
+        let end = self
+            .next
+            .map(|mut next| unsafe { next.as_mut().remove_entry(0) });
 
         let entry = core::mem::replace(&mut self.entries[idx], Entry::Empty);
 
@@ -437,7 +432,7 @@ fn remove_entry_page(fpa_inner: &mut Option<NonNull<FPAInner>>) {
                     free_kpage(
                         alloc.as_mut().unwrap(),
                         VirtAddr::from_ptr(last as *const _),
-                    )
+                    );
                 };
             }
 

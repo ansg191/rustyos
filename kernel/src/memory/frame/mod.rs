@@ -68,9 +68,10 @@ impl BitmapFrameAllocator {
         }
 
         // Check contiguity
-        if !is_contiguous(first_frame, last_frame, bitmap_frames) {
-            panic!("Bitmap frames are not contiguous");
-        }
+        assert!(
+            is_contiguous(first_frame, last_frame, bitmap_frames),
+            "Bitmap frames are not contiguous"
+        );
 
         for frame in 0..bitmap_frames {
             let phys_addr = first_frame.start_address() + frame * 4096;
@@ -140,9 +141,8 @@ impl BitmapFrameAllocator {
             let frames = (region.end - region.start) / 4096;
             if frame < frames {
                 return Some(PhysAddr::new(region.start + frame * 4096));
-            } else {
-                frame -= frames;
             }
+            frame -= frames;
         }
         None
     }
@@ -153,9 +153,8 @@ impl BitmapFrameAllocator {
         for region in usable_regions(self.regions) {
             if addr.as_u64() >= region.start && addr.as_u64() < region.end {
                 return Some(frame + (addr.as_u64() - region.start) / 4096);
-            } else {
-                frame += (region.start - region.end) / 4096;
             }
+            frame += (region.start - region.end) / 4096;
         }
         None
     }
@@ -193,7 +192,7 @@ fn usable_regions(regions: &MemoryRegions) -> impl Iterator<Item = &MemoryRegion
 }
 
 /// Check if a range of frames is contiguous.
-fn is_contiguous(start: PhysFrame, end: PhysFrame, pages: u64) -> bool {
+const fn is_contiguous(start: PhysFrame, end: PhysFrame, pages: u64) -> bool {
     let start = start.start_address().as_u64();
     let end = end.start_address().as_u64() + 0x1000;
     let pages = pages * 0x1000;

@@ -28,8 +28,10 @@ macro_rules! memory_layout {
         $(
             paste::paste! {
                 $(#[$attr])*
+                #[allow(clippy::identity_op)]
                 pub const [<$name _START>]: VirtAddr = VirtAddr::new_truncate($start);
                 $(#[$attr])*
+                #[allow(clippy::identity_op)]
                 pub const [<$name _END>]: VirtAddr = VirtAddr::new_truncate($start + $size - 1);
             }
         )*

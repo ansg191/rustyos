@@ -21,12 +21,12 @@ pub struct BootFrameAllocator {
 
 impl BootFrameAllocator {
     /// Creates a new frame allocator with the given memory regions & no allocated frames.
-    pub fn new(regions: &'static MemoryRegions) -> Self {
+    pub const fn new(regions: &'static MemoryRegions) -> Self {
         Self { regions, next: 0 }
     }
 
     /// Returns the number of frames that have been allocated.
-    pub fn used(&self) -> usize {
+    pub const fn used(&self) -> usize {
         self.next
     }
 

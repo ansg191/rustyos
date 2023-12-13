@@ -9,16 +9,16 @@ pub static PIT0: ProgrammableIntervalTimer = ProgrammableIntervalTimer::new(Chan
 pub static PIT1: ProgrammableIntervalTimer = ProgrammableIntervalTimer::new(Channel::Channel1);
 pub static PIT2: ProgrammableIntervalTimer = ProgrammableIntervalTimer::new(Channel::Channel2);
 
-pub struct ProgrammableIntervalTimer(Mutex<PIT>);
+pub struct ProgrammableIntervalTimer(Mutex<Pit>);
 
-struct PIT {
+struct Pit {
     ch: Port<u8>,
     cmd: PortWriteOnly<u8>,
 }
 
 impl ProgrammableIntervalTimer {
     const fn new(ch: Channel) -> Self {
-        Self(Mutex::new(PIT {
+        Self(Mutex::new(Pit {
             ch: Port::new(ch.port()),
             cmd: PortWriteOnly::new(0x43),
         }))
@@ -55,7 +55,7 @@ impl ProgrammableIntervalTimer {
         unsafe {
             let lo = pit.ch.read();
             let hi = pit.ch.read();
-            ((hi as u16) << 8) | (lo as u16)
+            (u16::from(hi) << 8) | u16::from(lo)
         }
     }
 }
@@ -68,7 +68,7 @@ pub enum Channel {
 }
 
 impl Channel {
-    pub const fn port(&self) -> u16 {
+    pub const fn port(self) -> u16 {
         match self {
             Self::Channel0 => 0x40,
             Self::Channel1 => 0x41,

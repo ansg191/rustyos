@@ -38,8 +38,8 @@ impl Lapic {
         enable_lapic();
 
         let addr = {
-            let table = PAGE_TABLE.lock();
-            let ptable = table.as_ref().unwrap();
+            let page_table = PAGE_TABLE.lock();
+            let ptable = page_table.as_ref().unwrap();
 
             let phys_addr = cpu_get_lapic_base();
             ptable.phys_offset() + phys_addr
@@ -54,6 +54,8 @@ impl Lapic {
 
     fn verify(&mut self) -> Result<(), Error> {
         const LVR_MASK: u32 = 0xff_00ff;
+        const APIC_ID_MASK: u32 = 0xFF << 24;
+
         let ver = self.read(RegisterOffset::Version);
         self.write(RegisterOffset::Version, ver ^ LVR_MASK);
 
@@ -73,7 +75,6 @@ impl Lapic {
         }
 
         // The ID register is read/write in a real APIC
-        const APIC_ID_MASK: u32 = 0xFF << 24;
         let id = self.read(RegisterOffset::ID);
         self.write(RegisterOffset::ID, id ^ APIC_ID_MASK);
 
@@ -88,12 +89,12 @@ impl Lapic {
     }
 
     fn read(&self, off: RegisterOffset) -> u32 {
-        let ptr: *const u32 = (self.addr + off.offset() as u64).as_ptr();
+        let ptr: *const u32 = (self.addr + u64::from(off.offset())).as_ptr();
         unsafe { ptr.read_volatile() }
     }
 
     fn write(&mut self, off: RegisterOffset, val: u32) {
-        let ptr: *mut u32 = (self.addr + off.offset() as u64).as_mut_ptr();
+        let ptr: *mut u32 = (self.addr + u64::from(off.offset())).as_mut_ptr();
         unsafe { ptr.write_volatile(val) };
     }
 
@@ -121,7 +122,7 @@ impl Lapic {
         // Stop APIC timer
         self.write(RegisterOffset::LVTTimer, 0x10000);
 
-        let ticks_per_10ms = 0xFFFFFFFF - self.read(RegisterOffset::CurrentCount);
+        let ticks_per_10ms = 0xFFFF_FFFF - self.read(RegisterOffset::CurrentCount);
 
         // Start timer as periodic on IRQ 0, divider 16, with the number of ticks we counted
         self.write(RegisterOffset::LVTTimer, 32 | 0x20000);
@@ -135,7 +136,7 @@ impl Lapic {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialOrd, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Error {
     NotSupported,
     VerificationFailed,
@@ -173,15 +174,15 @@ pub enum RegisterOffset {
 }
 
 impl RegisterOffset {
-    pub fn offset(&self) -> u16 {
-        *self as u16
+    pub const fn offset(self) -> u16 {
+        self as u16
     }
 
-    pub fn can_read(&self) -> bool {
+    pub const fn can_read(self) -> bool {
         !matches!(self, Self::EndOfInterrupt)
     }
 
-    pub fn can_write(&self) -> bool {
+    pub const fn can_write(self) -> bool {
         !matches!(
             self,
             Self::Version
@@ -203,7 +204,7 @@ fn disable_8259() {
             "out 0xa1, al",
             "out 0x21, al",
             options(nostack, nomem)
-        )
+        );
     }
 }
 

@@ -39,7 +39,6 @@ lazy_static! {
     };
 }
 
-#[no_mangle]
 pub fn init_idt() {
     // Load the IDT
     IDT.load();

@@ -42,7 +42,7 @@ pub fn init() {
     let level_4_table = active_level_4_table();
     // SAFETY: We know that the physical address space is mapped to the virtual address space
     // at PHYSICAL_MEM_START
-    *PAGE_TABLE.lock() = Some(unsafe { OffsetPageTable::new(level_4_table, PHYSICAL_MEM_START) })
+    *PAGE_TABLE.lock() = Some(unsafe { OffsetPageTable::new(level_4_table, PHYSICAL_MEM_START) });
 }
 
 /// Initialize the [`BitmapFrameAllocator`] with the given memory regions.

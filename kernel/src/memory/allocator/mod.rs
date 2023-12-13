@@ -109,9 +109,7 @@ unsafe impl Allocator for KAllocator {
             1025..=2048 => allocate!(buckets, 8),
             _ => {
                 // Fall back to page allocator
-                if align as u64 > Size4KiB::SIZE {
-                    panic!("invalid alignment");
-                }
+                assert!(align as u64 <= Size4KiB::SIZE, "invalid alignment");
                 return PAGE_ALLOCATOR.allocate(layout);
             }
         };
@@ -143,9 +141,7 @@ unsafe impl Allocator for KAllocator {
             1025..=2048 => deallocate!(buckets, 8, addr),
             _ => {
                 // Fall back to page allocator
-                if align as u64 > Size4KiB::SIZE {
-                    panic!("invalid alignment");
-                }
+                assert!(align as u64 <= Size4KiB::SIZE, "invalid alignment");
                 PAGE_ALLOCATOR.deallocate(ptr, layout);
             }
         }
@@ -155,12 +151,12 @@ unsafe impl Allocator for KAllocator {
 unsafe impl GlobalAlloc for KAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         self.allocate(layout)
-            .map(|x| x.as_mut_ptr())
+            .map(core::ptr::NonNull::as_mut_ptr)
             .unwrap_or(core::ptr::null_mut())
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        self.deallocate(NonNull::new_unchecked(ptr), layout)
+        self.deallocate(NonNull::new_unchecked(ptr), layout);
     }
 }
 
@@ -191,7 +187,7 @@ impl<const SIZE: usize, const BLOCK: u64> Bucket<SIZE, BLOCK> {
             let leading = byte.leading_ones();
             let bit = 7 - leading;
 
-            let off = i as u64 * 8 + leading as u64;
+            let off = i as u64 * 8 + u64::from(leading);
             if off >= Size4KiB::SIZE / BLOCK {
                 continue;
             }
