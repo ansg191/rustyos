@@ -5,6 +5,11 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+
+verbose = []
+
 [dependencies]
 acpi = "5.0.0"
 bit_field = "0.10.2"
@@ -17,3 +22,4 @@ spin = "0.9.8"
 static_assertions = "1.1.0"
 x86_64 = "0.14.11"
 bitflags = { version = "2.4.1" }
+hashbrown = "0.14.3"

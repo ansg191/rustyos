@@ -23,6 +23,7 @@ fn general_handler(_: InterruptStackFrame, idx: u8, errcode: Option<u64>) {
 }
 
 extern "x86-interrupt" fn timer_handler(_: InterruptStackFrame) {
+    crate::time::TICKS.inc();
     ack_lapic();
 }
 

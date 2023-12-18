@@ -70,7 +70,7 @@ unsafe fn alloc_kpage(
     let frame = alloc.allocate_frame().ok_or(AllocError)?;
     let page: Page<Size4KiB> = Page::containing_address(virt_addr);
 
-    if cfg!(debug_assertions) {
+    if cfg!(feature = "verbose") {
         crate::kprintln!("DEBUG: Allocating {:?} for {:?}", frame, page);
     }
 
@@ -91,7 +91,7 @@ unsafe fn free_kpage(alloc: &mut impl FrameDeallocator<Size4KiB>, virt_addr: Vir
     let mut page_table = PAGE_TABLE.lock();
     let pt = page_table.as_mut().unwrap();
 
-    if cfg!(debug_assertions) {
+    if cfg!(feature = "verbose") {
         crate::kprintln!("DEBUG: Freeing {:?}", page);
     }
 

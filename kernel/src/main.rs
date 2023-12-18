@@ -1,10 +1,12 @@
 #![feature(allocator_api, abi_x86_interrupt, asm_const, never_type)]
 #![feature(slice_ptr_get)]
+#![feature(slice_as_chunks)]
 #![warn(clippy::pedantic, clippy::nursery)]
 #![allow(
     dead_code,
     clippy::module_name_repetitions,
-    clippy::cast_possible_truncation
+    clippy::cast_possible_truncation,
+    clippy::significant_drop_tightening
 )]
 #![no_std]
 #![no_main]
@@ -12,6 +14,7 @@
 extern crate alloc;
 
 mod acpi;
+mod fs;
 mod ioapic;
 mod lapic;
 mod memory;
@@ -19,6 +22,7 @@ mod mp;
 mod panic;
 mod pit;
 mod serial;
+mod time;
 mod trap;
 
 const BOOT_CONFIG: bootloader_api::BootloaderConfig = {
@@ -98,6 +102,42 @@ pub fn kmain(info: &'static mut bootloader_api::BootInfo) -> ! {
     // let frame = frame_alloc.allocate_frame();
     // kprintln!("{frame:?}");
     // unsafe {frame_alloc.deallocate_frame(frame.unwrap())};
+
+    // let fs = fs::ramfs::FileSystem::new();
+    // let ctx = fs::mount::MountCtx {
+    //     fs: Box::new(fs),
+    //     dest: None,
+    //     source: None,
+    // };
+    // fs::MOUNTS.mount_fs(ctx).unwrap();
+    //
+    // let root = fs::dentry::DIR_CACHE.get("/").unwrap();
+    //
+    // let mut i_file = {
+    //     let sb = root.fs().superblock();
+    //     let mut guard = sb.write();
+    //     guard.create_inode().unwrap()
+    // };
+    //
+    // let p_file = Path::new("test.txt").components().next().unwrap();
+    // i_file.create(&root, p_file).unwrap();
+    //
+    // {
+    //     let sb = root.fs().superblock();
+    //     let mut guard = sb.write();
+    //     guard.write_inode(&i_file).unwrap();
+    // }
+    //
+    // kprintln!("Root: {:#?}", root);
+    // kprintln!("i_file: {:#?}", i_file);
+    //
+    // {
+    //     let inode = root.inode();
+    //     let list = inode.list().unwrap();
+    //     for (path, inode) in list {
+    //         kprintln!("{}: {:#?}", path, inode);
+    //     }
+    // }
 
     kprintln!("No Crash!");
     loop {
