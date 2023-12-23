@@ -14,9 +14,8 @@
 extern crate alloc;
 
 mod acpi;
+mod apic;
 mod fs;
-mod ioapic;
-mod lapic;
 mod memory;
 mod mp;
 mod panic;
@@ -46,16 +45,10 @@ pub fn kmain(info: &'static mut bootloader_api::BootInfo) -> ! {
     memory::init();
     memory::init_frame_allocator(&info.memory_regions);
 
-    let mut lpic = lapic::Lapic::new().unwrap();
-    lpic.start_timer();
-    *lapic::LAPIC.lock() = Some(lpic);
-
-    let mut ioapic = ioapic::IoApic::new().unwrap();
-    ioapic.disable_all();
-    *ioapic::IOAPIC.lock() = Some(ioapic);
-
+    apic::LAPIC.lock().attach();
+    apic::IOAPIC.lock().disable_all();
     serial::COM1.lock().enable_interrupts();
-
+    time::start_timer();
     x86_64::instructions::interrupts::enable();
 
     kprintln!("Hello, world!");

@@ -1,4 +1,5 @@
 use lazy_static::lazy_static;
+use x86::apic::ApicControl;
 use x86_64::{
     set_general_handler,
     structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode},
@@ -9,10 +10,9 @@ use crate::kprintln;
 pub const IRQ0: u8 = 0x20;
 pub const IRQ_COM1: u8 = 4;
 
+#[inline]
 fn ack_lapic() {
-    if let Some(ref mut lapic) = *crate::lapic::LAPIC.lock() {
-        lapic.end_of_interrupt();
-    }
+    crate::apic::LAPIC.lock().eoi();
 }
 
 fn general_handler(_: InterruptStackFrame, idx: u8, errcode: Option<u64>) {

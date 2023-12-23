@@ -87,10 +87,8 @@ impl Serial {
         }
 
         // Enable interrupts on IOAPIC
-        let mut ioapic = crate::ioapic::IOAPIC.lock();
-        if let Some(ioapic) = &mut *ioapic {
-            ioapic.enable(crate::trap::IRQ_COM1, 0);
-        }
+        let mut ioapic = crate::apic::IOAPIC.lock();
+        ioapic.enable(crate::trap::IRQ_COM1, 0);
     }
 
     pub fn write_byte(&mut self, byte: u8) {
